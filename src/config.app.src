@@ -11,7 +11,7 @@
 % the License.
 
 {application, config, [
-    {description, "INI file configuration system for Apache CouchDB"},
+    {description, "INI file configuration system for Erlang applications like Apache CouchDB"},
     {vsn, git},
     {registered, [
         config,
