@@ -33,7 +33,7 @@ ini_files() ->
 command_line() ->
     case init:get_argument(configs_ini) of
         error ->
-            skip;
+            [];
         {ok, [IniFiles]} ->
             IniFiles
     end.
@@ -41,7 +41,7 @@ command_line() ->
 application_env() ->
     case application:get_env(config, ini_files) of
         undefined ->
-            skip;
+            [];
         {ok, IniFiles} ->
             IniFiles
     end.

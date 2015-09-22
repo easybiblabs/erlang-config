@@ -38,9 +38,9 @@
 -export([handle_call/3, handle_cast/2, handle_info/2]).
 
 -record(config, {
-	notify_funs=[],
-	ini_files=undefined,
-	write_filename=undefined
+	notify_funs = [],
+	ini_files = undefined,
+	write_filename = undefined
 }).
 
 
@@ -322,7 +322,7 @@ parse_ini_file(IniFile) ->
 						_ ->
 							{AccSectionName, AccValues}
 					end;
-				[""|_LineValues] -> % line begins with "=", ignore
+				["" | _LineValues] -> % line begins with "=", ignore
 					{AccSectionName, AccValues};
 				[ValueName|LineValues] -> % yeehaw, got a line!
 					RemainingLine = config_util:implode(LineValues, "="),
