@@ -22,15 +22,23 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    config_sup:start_link(get_ini_files()).
+    config_sup:start_link(ini_files()).
 
 stop(_State) ->
     ok.
 
-get_ini_files() ->
-    hd([L || L <- [command_line(), env(), default()], L =/= skip]).
+ini_files() ->
+    command_line() ++ application_env() ++ defaults().
 
-env() ->
+command_line() ->
+    case init:get_argument(configs_ini) of
+        error ->
+            skip;
+        {ok, [IniFiles]} ->
+            IniFiles
+    end.
+
+application_env() ->
     case application:get_env(config, ini_files) of
         undefined ->
             skip;
@@ -38,15 +46,7 @@ env() ->
             IniFiles
     end.
 
-command_line() ->
-    case init:get_argument(couch_ini) of
-        error ->
-            skip;
-        {ok, [IniFiles]} ->
-            IniFiles
-    end.
-
-default() ->
+defaults() ->
     Etc = filename:join(code:root_dir(), "etc"),
-    Default = [filename:join(Etc,"default.ini"), filename:join(Etc,"local.ini")],
+    Default = [filename:join(Etc, "default.ini")],
     lists:filter(fun filelib:is_file/1, Default).
