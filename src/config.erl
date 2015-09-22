@@ -38,332 +38,323 @@
 -export([handle_call/3, handle_cast/2, handle_info/2]).
 
 -record(config, {
-    notify_funs=[],
-    ini_files=undefined,
-    write_filename=undefined
+	notify_funs=[],
+	ini_files=undefined,
+	write_filename=undefined
 }).
 
 
 start_link(IniFiles) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, IniFiles, []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, IniFiles, []).
 
 stop() ->
-    gen_server:cast(?MODULE, stop).
-
+	gen_server:cast(?MODULE, stop).
 
 reload() ->
-    gen_server:call(?MODULE, reload).
+	gen_server:call(?MODULE, reload).
 
 all() ->
-    lists:sort(gen_server:call(?MODULE, all, infinity)).
+	lists:sort(gen_server:call(?MODULE, all, infinity)).
 
 get_integer(Section, Key, Default) when is_integer(Default) ->
-    try
-        to_integer(get(Section, Key, Default))
-    catch
-        error:badarg ->
-            Default
-    end.
+	try
+		to_integer(get(Section, Key, Default))
+	catch
+		error:badarg ->
+			Default
+	end.
 
 set_integer(Section, Key, Value) when is_integer(Value) ->
-    set(Section, Key, integer_to_list(Value));
+	set(Section, Key, integer_to_list(Value));
 set_integer(_, _, _) ->
-    error(badarg).
+	error(badarg).
 
 to_integer(List) when is_list(List) ->
-    list_to_integer(List);
+	list_to_integer(List);
 to_integer(Int) when is_integer(Int) ->
-    Int;
+	Int;
 to_integer(Bin) when is_binary(Bin) ->
-    list_to_integer(binary_to_list(Bin)).
+	list_to_integer(binary_to_list(Bin)).
 
 get_float(Section, Key, Default) when is_float(Default) ->
-    try
-        to_float(get(Section, Key, Default))
-    catch
-        error:badarg ->
-            Default
-    end.
+	try
+		to_float(get(Section, Key, Default))
+	catch
+		error:badarg ->
+			Default
+	end.
 
 set_float(Section, Key, Value) when is_float(Value) ->
-    set(Section, Key, float_to_list(Value));
+	set(Section, Key, float_to_list(Value));
 set_float(_, _, _) ->
-    error(badarg).
+	error(badarg).
 
 to_float(List) when is_list(List) ->
-    list_to_float(List);
+	list_to_float(List);
 to_float(Float) when is_float(Float) ->
-    Float;
+	Float;
 to_float(Int) when is_integer(Int) ->
-    list_to_float(integer_to_list(Int));
+	list_to_float(integer_to_list(Int));
 to_float(Bin) when is_binary(Bin) ->
-    list_to_float(binary_to_list(Bin)).
+	list_to_float(binary_to_list(Bin)).
 
 get_boolean(Section, Key, Default) when is_boolean(Default) ->
-    try
-        to_boolean(get(Section, Key, Default))
-    catch
-        error:badarg ->
-            Default
-    end.
+	try
+		to_boolean(get(Section, Key, Default))
+	catch
+		error:badarg ->
+			Default
+	end.
 
 set_boolean(Section, Key, true) ->
-    set(Section, Key, "true");
+	set(Section, Key, "true");
 set_boolean(Section, Key, false) ->
-    set(Section, Key, "false");
+	set(Section, Key, "false");
 set_boolean(_, _, _) ->
-    error(badarg).
+	error(badarg).
 
 to_boolean(List) when is_list(List) ->
-    case list_to_existing_atom(List) of
-        true  ->
-            true;
-        false ->
-            false;
-        _ ->
-            error(badarg)
-    end;
+	case list_to_existing_atom(List) of
+		true  ->
+			true;
+		false ->
+			false;
+		_ ->
+			error(badarg)
+	end;
 to_boolean(Bool) when is_boolean(Bool) ->
-    Bool.
+	Bool.
 
 get(Section) when is_binary(Section) ->
-    ?MODULE:get(binary_to_list(Section));
+	?MODULE:get(binary_to_list(Section));
 get(Section) when is_list(Section) ->
-    Matches = ets:match(?MODULE, {{Section, '$1'}, '$2'}),
-    [{Key, Value} || [Key, Value] <- Matches].
+	Matches = ets:match(?MODULE, {{Section, '$1'}, '$2'}),
+	[{Key, Value} || [Key, Value] <- Matches].
 
 get(Section, Key) ->
-    ?MODULE:get(Section, Key, undefined).
+	?MODULE:get(Section, Key, undefined).
 
 get(Section, Key, Default) when is_binary(Section) and is_binary(Key) ->
-    ?MODULE:get(binary_to_list(Section), binary_to_list(Key), Default);
+	?MODULE:get(binary_to_list(Section), binary_to_list(Key), Default);
 get(Section, Key, Default) when is_list(Section), is_list(Key) ->
-    case ets:lookup(?MODULE, {Section, Key}) of
-        [] when Default == undefined -> Default;
-        [] when is_boolean(Default) -> Default;
-        [] when is_float(Default) -> Default;
-        [] when is_integer(Default) -> Default;
-        [] when is_list(Default) -> Default;
-        [] when is_atom(Default) -> Default;
-        [] -> error(badarg);
-        [{_, Match}] -> Match
-    end.
+	case ets:lookup(?MODULE, {Section, Key}) of
+		[] when Default == undefined -> Default;
+		[] when is_boolean(Default) -> Default;
+		[] when is_float(Default) -> Default;
+		[] when is_integer(Default) -> Default;
+		[] when is_list(Default) -> Default;
+		[] when is_atom(Default) -> Default;
+		[] -> error(badarg);
+		[{_, Match}] -> Match
+	end.
 
 set(Section, Key, Value) ->
-    ?MODULE:set(Section, Key, Value, true, nil).
+	?MODULE:set(Section, Key, Value, true, nil).
 
 set(Section, Key, Value, Persist) when is_boolean(Persist) ->
-    ?MODULE:set(Section, Key, Value, Persist, nil);
+	?MODULE:set(Section, Key, Value, Persist, nil);
 set(Section, Key, Value, Reason) ->
-    ?MODULE:set(Section, Key, Value, true, Reason).
+	?MODULE:set(Section, Key, Value, true, Reason).
 
 set(Sec, Key, Val, Persist, Reason) when is_binary(Sec) and is_binary(Key) ->
-    ?MODULE:set(binary_to_list(Sec), binary_to_list(Key), Val, Persist, Reason);
+	?MODULE:set(binary_to_list(Sec), binary_to_list(Key), Val, Persist, Reason);
 set(Section, Key, Value, Persist, Reason)
-        when is_list(Section), is_list(Key), is_list(Value) ->
-    gen_server:call(?MODULE, {set, Section, Key, Value, Persist, Reason});
+		when is_list(Section), is_list(Key), is_list(Value) ->
+	gen_server:call(?MODULE, {set, Section, Key, Value, Persist, Reason});
 set(_Sec, _Key, _Val, _Persist, _Reason) ->
-    error(badarg).
+	error(badarg).
 
 
 delete(Section, Key) when is_binary(Section) and is_binary(Key) ->
-    delete(binary_to_list(Section), binary_to_list(Key));
+	delete(binary_to_list(Section), binary_to_list(Key));
 delete(Section, Key) ->
-    delete(Section, Key, true, nil).
+	delete(Section, Key, true, nil).
 
 delete(Section, Key, Persist) when is_boolean(Persist) ->
-    delete(Section, Key, Persist, nil);
+	delete(Section, Key, Persist, nil);
 delete(Section, Key, Reason) ->
-    delete(Section, Key, true, Reason).
+	delete(Section, Key, true, Reason).
 
 delete(Sec, Key, Persist, Reason) when is_binary(Sec) and is_binary(Key) ->
-    delete(binary_to_list(Sec), binary_to_list(Key), Persist, Reason);
+	delete(binary_to_list(Sec), binary_to_list(Key), Persist, Reason);
 delete(Section, Key, Persist, Reason) when is_list(Section), is_list(Key) ->
-    gen_server:call(?MODULE, {delete, Section, Key, Persist, Reason}).
-
+	gen_server:call(?MODULE, {delete, Section, Key, Persist, Reason}).
 
 listen_for_changes(CallbackModule, InitialState) ->
-    gen_server:call(?MODULE, {listen_for_changes, CallbackModule, InitialState}).
+	gen_server:call(?MODULE, {listen_for_changes, CallbackModule, InitialState}).
 
 init(IniFiles) ->
-    ets:new(?MODULE, [named_table, set, protected]),
-    lists:map(fun(IniFile) ->
-        {ok, ParsedIniValues} = parse_ini_file(IniFile),
-        ets:insert(?MODULE, ParsedIniValues)
-    end, IniFiles),
-    WriteFile = case IniFiles of
-        [_|_] -> lists:last(IniFiles);
-        _ -> undefined
-    end,
-    debug_config(),
-    {ok, #config{ini_files=IniFiles, write_filename=WriteFile}}.
-
+	ets:new(?MODULE, [named_table, set, protected]),
+	lists:map(fun(IniFile) ->
+		{ok, ParsedIniValues} = parse_ini_file(IniFile),
+		ets:insert(?MODULE, ParsedIniValues)
+	end, IniFiles),
+	WriteFile = case IniFiles of
+		[_|_] -> lists:last(IniFiles);
+		_ -> undefined
+	end,
+	debug_config(),
+	{ok, #config{ini_files=IniFiles, write_filename=WriteFile}}.
 
 terminate(_Reason, _State) ->
-    ok.
-
+	ok.
 
 handle_call(all, _From, Config) ->
-    Resp = lists:sort((ets:tab2list(?MODULE))),
-    {reply, Resp, Config};
+	Resp = lists:sort((ets:tab2list(?MODULE))),
+	{reply, Resp, Config};
 handle_call({set, Sec, Key, Val, Persist, Reason}, _From, Config) ->
-    true = ets:insert(?MODULE, {{Sec, Key}, Val}),
-    lager:notice("~p: [~s] ~s set to ~s for reason ~p",
-        [?MODULE, Sec, Key, Val, Reason]),
-    case {Persist, Config#config.write_filename} of
-        {true, undefined} ->
-            ok;
-        {true, FileName} ->
-            config_writer:save_to_file({{Sec, Key}, Val}, FileName);
-        _ ->
-            ok
-    end,
-    Event = {config_change, Sec, Key, Val, Persist},
-    gen_event:sync_notify(config_event, Event),
-    {reply, ok, Config};
+	true = ets:insert(?MODULE, {{Sec, Key}, Val}),
+	lager:notice("~p: [~s] ~s set to ~s for reason ~p",
+		[?MODULE, Sec, Key, Val, Reason]),
+	case {Persist, Config#config.write_filename} of
+		{true, undefined} ->
+			ok;
+		{true, FileName} ->
+			config_writer:save_to_file({{Sec, Key}, Val}, FileName);
+		_ ->
+			ok
+	end,
+	Event = {config_change, Sec, Key, Val, Persist},
+	gen_event:sync_notify(config_event, Event),
+	{reply, ok, Config};
 handle_call({delete, Sec, Key, Persist, Reason}, _From, Config) ->
-    true = ets:delete(?MODULE, {Sec,Key}),
-    lager:notice("~p: [~s] ~s deleted for reason ~p",
-        [?MODULE, Sec, Key, Reason]),
-    case {Persist, Config#config.write_filename} of
-        {true, undefined} ->
-            ok;
-        {true, FileName} ->
-            config_writer:save_to_file({{Sec, Key}, ""}, FileName);
-        _ ->
-            ok
-    end,
-    Event = {config_change, Sec, Key, deleted, Persist},
-    gen_event:sync_notify(config_event, Event),
-    {reply, ok, Config};
+	true = ets:delete(?MODULE, {Sec,Key}),
+	lager:notice("~p: [~s] ~s deleted for reason ~p",
+		[?MODULE, Sec, Key, Reason]),
+	case {Persist, Config#config.write_filename} of
+		{true, undefined} ->
+			ok;
+		{true, FileName} ->
+			config_writer:save_to_file({{Sec, Key}, ""}, FileName);
+		_otherwise ->
+			ok
+	end,
+	Event = {config_change, Sec, Key, deleted, Persist},
+	gen_event:sync_notify(config_event, Event),
+	{reply, ok, Config};
 handle_call(reload, _From, Config) ->
-    DiskKVs = lists:foldl(fun(IniFile, DiskKVs0) ->
-        {ok, ParsedIniValues} = parse_ini_file(IniFile),
-        lists:foldl(fun({K, V}, DiskKVs1) ->
-            dict:store(K, V, DiskKVs1)
-        end, DiskKVs0, ParsedIniValues)
-    end, dict:new(), Config#config.ini_files),
-    % Update ets with anything we just read
-    % from disk
-    dict:fold(fun(K, V, _) ->
-        ets:insert(?MODULE, {K, V})
-    end, nil, DiskKVs),
-    % And remove anything in ets that wasn't
-    % on disk.
-    ets:foldl(fun({K, _}, _) ->
-        case dict:is_key(K, DiskKVs) of
-            true ->
-                ok;
-            false ->
-                ets:delete(?MODULE, K)
-        end
-    end, nil, ?MODULE),
-    {reply, ok, Config};
+	DiskKVs = lists:foldl(fun(IniFile, DiskKVs0) ->
+		{ok, ParsedIniValues} = parse_ini_file(IniFile),
+		lists:foldl(fun({K, V}, DiskKVs1) ->
+			dict:store(K, V, DiskKVs1)
+		end, DiskKVs0, ParsedIniValues)
+	end, dict:new(), Config#config.ini_files),
+	% Update ets with anything we just read
+	% from disk
+	dict:fold(fun(K, V, _) ->
+		ets:insert(?MODULE, {K, V})
+	end, nil, DiskKVs),
+	% And remove anything in ets that wasn't
+	% on disk.
+	ets:foldl(fun({K, _}, _) ->
+		case dict:is_key(K, DiskKVs) of
+			true ->
+				ok;
+			false ->
+				ets:delete(?MODULE, K)
+		end
+	end, nil, ?MODULE),
+	{reply, ok, Config};
 handle_call({listen_for_changes, CallbackModule, InitialState},
-        {Subscriber, _}, Config) ->
-    Reply = config_listener:start(CallbackModule, {Subscriber, InitialState}),
-    {reply, Reply, Config}.
+		{Subscriber, _}, Config) ->
+	Reply = config_listener:start(CallbackModule, {Subscriber, InitialState}),
+	{reply, Reply, Config}.
 
 handle_cast(stop, State) ->
-    {stop, normal, State};
+	{stop, normal, State};
 handle_cast(_Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 handle_info({gen_event_EXIT, {config_listener, Module}, shutdown}, State)  ->
-    lager:notice("config_listener(~p) stopped with reason: shutdown~n", [Module]),
-    {noreply, State};
+	lager:notice("config_listener(~p) stopped with reason: shutdown~n", [Module]),
+	{noreply, State};
 handle_info({gen_event_EXIT, {config_listener, Module}, normal}, State)  ->
-    lager:info("config_listener(~p) stopped with reason: shutdown~n", [Module]),
-    {noreply, State};
+	lager:info("config_listener(~p) stopped with reason: shutdown~n", [Module]),
+	{noreply, State};
 handle_info({gen_event_EXIT, {config_listener, Module}, Reason}, State) ->
-    lager:error("config_listener(~p) stopped with reason: ~p~n", [Module, Reason]),
-    {noreply, State};
+	lager:error("config_listener(~p) stopped with reason: ~p~n", [Module, Reason]),
+	{noreply, State};
 handle_info(Info, State) ->
-    lager:error("config:handle_info Info: ~p~n", [Info]),
-    {noreply, State}.
+	lager:error("config:handle_info Info: ~p~n", [Info]),
+	{noreply, State}.
 
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
-
+	{ok, State}.
 
 parse_ini_file(IniFile) ->
-    IniFilename = config_util:abs_pathname(IniFile),
-    IniBin =
-    case file:read_file(IniFilename) of
-        {ok, IniBin0} ->
-            IniBin0;
-        {error, enoent} ->
-            Fmt = "Couldn't find server configuration file ~s.",
-            Msg = list_to_binary(io_lib:format(Fmt, [IniFilename])),
-            lager:error("~s~n", [Msg]),
-            throw({startup_error, Msg})
-    end,
+	IniFilename = config_util:abs_pathname(IniFile),
+	IniBin =
+	case file:read_file(IniFilename) of
+		{ok, IniBin0} ->
+			IniBin0;
+		{error, enoent} ->
+			Fmt = "Couldn't find server configuration file ~s.",
+			Msg = list_to_binary(io_lib:format(Fmt, [IniFilename])),
+			lager:error("~s~n", [Msg]),
+			throw({startup_error, Msg})
+	end,
+	Lines = re:split(IniBin, "\r\n|\n|\r|\032", [{return, list}]),
+	StrippedLines = [string:strip(Line) || Line <- Lines],
+	{_, ParsedIniValues} = lists:foldl(fun
+		("[" ++ Rest, {AccSectionName, AccValues}) ->
+			case re:split(Rest, "\\]", [{return, list}]) of
+				[NewSectionName, ""] ->
+					{NewSectionName, AccValues};
+				_Otherwise -> % end bracket not at end, ignore this line
+					{AccSectionName, AccValues}
+			end;
+		(";" ++ _Comment, {AccSectionName, AccValues}) ->
+			{AccSectionName, AccValues};
+		(Line, {AccSectionName, AccValues}) ->
+			case re:split(Line, "\s?=\s?", [{return, list}]) of
+				[Value] ->
+					case {multi_line_value_part(Line), AccValues} of
+						{true, [{{_, ValueName}, PrevValue} | AccValuesRest]} ->
+							% remove comment
+							case re:split(Value, " ;|\t;", [{return, list}]) of
+								[[]] ->
+									% empty line
+									{AccSectionName, AccValues};
+								[LineValue | _Rest] ->
+									E = {{AccSectionName, ValueName}, PrevValue ++ " " ++ LineValue},
+									{AccSectionName, [E | AccValuesRest]}
+							end;
+						_ ->
+							{AccSectionName, AccValues}
+					end;
+				[""|_LineValues] -> % line begins with "=", ignore
+					{AccSectionName, AccValues};
+				[ValueName|LineValues] -> % yeehaw, got a line!
+					RemainingLine = config_util:implode(LineValues, "="),
+					% removes comments
+					case re:split(RemainingLine, " ;|\t;", [{return, list}]) of
+						[[]] ->
+							% empty line means delete this key
+							ets:delete(?MODULE, {AccSectionName, ValueName}),
+							{AccSectionName, AccValues};
+						[LineValue | _Rest] ->
+							{AccSectionName,
+								[{{AccSectionName, ValueName}, LineValue} | AccValues]}
+					end
+			end
+	end, {"", []}, StrippedLines),
+	{ok, ParsedIniValues}.
 
-    Lines = re:split(IniBin, "\r\n|\n|\r|\032", [{return, list}]),
-    {_, ParsedIniValues} =
-    lists:foldl(fun(Line, {AccSectionName, AccValues}) ->
-            case string:strip(Line) of
-            "[" ++ Rest ->
-                case re:split(Rest, "\\]", [{return, list}]) of
-                [NewSectionName, ""] ->
-                    {NewSectionName, AccValues};
-                _Else -> % end bracket not at end, ignore this line
-                    {AccSectionName, AccValues}
-                end;
-            ";" ++ _Comment ->
-                {AccSectionName, AccValues};
-            Line2 ->
-                case re:split(Line2, "\s?=\s?", [{return, list}]) of
-                [Value] ->
-                    MultiLineValuePart = case re:run(Line, "^ \\S", []) of
-                    {match, _} ->
-                        true;
-                    _ ->
-                        false
-                    end,
-                    case {MultiLineValuePart, AccValues} of
-                    {true, [{{_, ValueName}, PrevValue} | AccValuesRest]} ->
-                        % remove comment
-                        case re:split(Value, " ;|\t;", [{return, list}]) of
-                        [[]] ->
-                            % empty line
-                            {AccSectionName, AccValues};
-                        [LineValue | _Rest] ->
-                            E = {{AccSectionName, ValueName},
-                                PrevValue ++ " " ++ LineValue},
-                            {AccSectionName, [E | AccValuesRest]}
-                        end;
-                    _ ->
-                        {AccSectionName, AccValues}
-                    end;
-                [""|_LineValues] -> % line begins with "=", ignore
-                    {AccSectionName, AccValues};
-                [ValueName|LineValues] -> % yeehaw, got a line!
-                    RemainingLine = config_util:implode(LineValues, "="),
-                    % removes comments
-                    case re:split(RemainingLine, " ;|\t;", [{return, list}]) of
-                    [[]] ->
-                        % empty line means delete this key
-                        ets:delete(?MODULE, {AccSectionName, ValueName}),
-                        {AccSectionName, AccValues};
-                    [LineValue | _Rest] ->
-                        {AccSectionName,
-                            [{{AccSectionName, ValueName}, LineValue} | AccValues]}
-                    end
-                end
-            end
-        end, {"", []}, Lines),
-    {ok, ParsedIniValues}.
-
+multi_line_value_part(Line) ->
+	case re:run(Line, "^ \\S", []) of
+		{match, _} ->
+			true;
+		_ ->
+			false
+	end.
 
 debug_config() ->
-    case ?MODULE:get("log", "level") of
-        "debug" ->
-            io:format("Configuration Settings:~n", []),
-            lists:foreach(fun({{Mod, Key}, Val}) ->
-                io:format("  [~s] ~s=~p~n", [Mod, Key, Val])
-            end, lists:sort(ets:tab2list(?MODULE)));
-        _ ->
-            ok
-    end.
-
+	case ?MODULE:get("log", "level") of
+		"debug" ->
+			io:format("Configuration Settings:~n", []),
+			lists:foreach(fun({{Mod, Key}, Val}) ->
+				io:format("  [~s] ~s=~p~n", [Mod, Key, Val])
+			end, lists:sort(ets:tab2list(?MODULE)));
+		_ ->
+			ok
+	end.
